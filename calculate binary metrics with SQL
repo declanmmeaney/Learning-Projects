@@ -1,0 +1,69 @@
+/* Create a new item view binary metric. Count the number of users per treatment group, and 
+count the number of users with views (for test_id 7). Alter the result to compute 
+the users who viewed an item WITHIN 30 days of their treatment event.
+
+SELECT
+  test_assignment,
+  COUNT(user_id) as total_in_group,
+  SUM(views_binary) as viewed,
+  SUM(viewed_item_30d) as viewed_30d
+  
+FROM
+
+(SELECT
+  exposed.user_id,
+  test_id,
+  test_assignment,
+  MAX(CASE WHEN exposed.event_time < views.event_time
+      THEN 1
+      ELSE 0
+      END) as views_binary,
+  MAX(CASE WHEN exposed.event_time < views.event_time 
+             AND DATE_PART ('day', views.event_time - exposed.event_time) <=30
+      THEN 1
+      ELSE 0
+      END) as viewed_item_30d
+FROM
+  (SELECT
+    event_id,
+    event_time,
+    user_id,
+    MAX(CASE WHEN parameter_name = 'test_id'
+      THEN CAST(parameter_value AS INT)
+      ELSE NULL
+      END) as test_id,
+    MAX(CASE WHEN parameter_name = 'test_assignment'
+      THEN CAST(parameter_value AS INT)
+      ELSE NULL
+      END) as test_assignment
+  FROM
+    dsv1069.events
+  WHERE
+    event_name = 'test_assignment'
+  GROUP BY 
+    user_id,
+    events.event_id,
+    events.event_time) exposed
+  
+LEFT OUTER JOIN 
+
+    (
+    SELECT 
+      *
+    FROM
+      dsv1069.events
+    WHERE
+      event_name = 'view_item'
+    )views
+
+ON exposed.user_id = views.user_id
+
+WHERE test_id = 7
+
+GROUP BY 
+  exposed.user_id,
+  test_id,
+  test_assignment) woo
+
+GROUP BY test_assignment
+LIMIT 100
