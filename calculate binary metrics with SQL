@@ -1,6 +1,6 @@
 /* Create a new item view binary metric. Count the number of users per treatment group, and 
 count the number of users with views (for test_id 7). Alter the result to compute 
-the users who viewed an item WITHIN 30 days of their treatment event.
+the users who viewed an item WITHIN 30 days of their treatment event. */
 
 SELECT
   test_assignment,
